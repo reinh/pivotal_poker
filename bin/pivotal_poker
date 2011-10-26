@@ -15,8 +15,9 @@ require('zappa') ->
   @get '/': ->
     @render 'index'
 
-  @on 'set nickname': ->
+  @on login: ->
     @client.nickname = @data.nickname
+    @emit login: {nickname: @client.nickname}
 
   @on said: ->
     @broadcast said: {nickname: @client.nickname, text: @data.text}
@@ -28,12 +29,24 @@ require('zappa') ->
     @on said: ->
       $('#chat').append "<p>#{@data.nickname} said: #{@data.text}</p>"
 
-    $ =>
-      @emit 'set nickname': {nickname: prompt 'Pick a nickname!'}
+    @on login: ->
+      $('#user-info').html """
+        Welcome #{@data.nickname}!
+        <button id='logout' class='btn' type='submit'>Sign Out</button>
+      """
 
+    $ =>
       $('#box').focus()
 
-      $('button').click (e) =>
+      $('#logout').click (e) =>
+        @emit logout:
+        e.preventDefault()
+
+      $('#login button').click (e) =>
+        @emit login: {nickname: $('#login input').val()}
+        e.preventDefault()
+
+      $('#chat-input button').click (e) =>
         @emit said: {text: $('#box').val()}
         $('#box').val('').focus()
         e.preventDefault()
@@ -42,7 +55,7 @@ require('zappa') ->
     doctype 5
     html ->
       head ->
-        title 'Pivotal Poker'
+        title @title or 'Pivotal Poker'
         script src: '/socket.io/socket.io.js'
         script src: '/zappa/jquery.js'
         script src: '/zappa/zappa.js'
@@ -54,7 +67,7 @@ require('zappa') ->
         div class: 'topbar', ->
           div class: 'fill', ->
             div class: 'container', ->
-              a class: 'brand', href: '/', -> 'Home'
+              a class: 'brand', href: '/', -> @title or 'Pivotal Poker'
 
               ul class: 'nav', ->
                 li class:'active', ->
@@ -63,17 +76,17 @@ require('zappa') ->
                   a href:'#', -> 'About'
                 li  ->
                   a href:'#', -> 'Contact'
-              form action:'', class:'pull-right', ->
-                input class:'input-small', type:'text', placeholder:'Username'
-                input class:'input-small', type:'password', placeholder:'Password'
-                button class:'btn', type:'submit', -> 'Sign in'
+              div id: 'user-info', class: 'pull-right', ->
+                form id:'login',  action:'', ->
+                  input class:'input-small', type:'text', placeholder:'Username'
+                  button class:'btn', type:'submit', -> 'Sign in'
 
         div class: 'container', ->
           div class: 'content', -> @body
 
   @view index: ->
     div class: 'page-header', ->
-      h1 -> 'Page name'
+      h1 -> 'Pivotal Poker'
     div class: 'row', ->
       div class: 'span10', ->
         h2 -> 'Primary content'

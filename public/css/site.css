@@ -37,16 +37,35 @@ body {
 .content .span4 {
   min-height: 500px;
 }
+
 /* Give a quick and non-cross-browser friendly divider */
 .content .span4 {
   margin-left: 0;
   padding-left: 19px;
   border-left: 1px solid #eee;
+  position: relative;
 }
 
 .topbar .btn {
   border: 0;
 }
 
+#chat {
+  margin-bottom: 40px;
+  height: 425px;
+}
 
-#chat-input
+#user-info {
+  color: #BFBFBF;
+  margin-top: 5px;
+}
+
+#user-info #login {
+  margin-top: 0;
+}
+
+#chat-input {
+  margin-bottom: 0;
+  position: absolute;
+  bottom: 0;
+}
