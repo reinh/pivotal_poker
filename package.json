@@ -1,0 +1,22 @@
+{
+  "name":         "pivotal_poker",
+  "version":      "0.0.0",
+  "author":       "Rein Henrichs <reinh@reinh.com> (http://reinh.com)",
+  "keywords":     "pivotal tracker planning poker",
+  "description":  "Planing poker for Pivotal Tracker",
+  "homepage":     "http://reinh.github.com/pivotal_poker",
+  "licenses":     [{
+    "type":       "MIT",
+    "url":        "http://github.com/reinh/pivotal_poker/raw/master/LICENSE"
+  }],
+
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/reinh/pivotal_poker.git"
+  },
+
+  "dependencies": {
+    "zappa"
+  },
+  "engine": "node >= 0.4.1 < 0.5.0"
+}
