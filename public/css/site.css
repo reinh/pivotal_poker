@@ -38,11 +38,7 @@ body {
   min-height: 500px;
 }
 
-/* Give a quick and non-cross-browser friendly divider */
 .content .span4 {
-  margin-left: 0;
-  padding-left: 19px;
-  border-left: 1px solid #eee;
   position: relative;
 }
 
@@ -68,4 +64,21 @@ body {
   margin-bottom: 0;
   position: absolute;
   bottom: 0;
+}
+
+.content .story {
+  margin-bottom: 20px;
+  padding: 10px;
+  background: #EEE;
+  height: 360px;
+}
+
+.content .players .row > div > div {
+  color: #666;
+  font-size: 24px;
+  text-align: center;
+  background: #DDD;
+  padding: 10px;
+  height: 80px;
+  line-height: 80px;
 }

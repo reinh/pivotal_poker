@@ -16,34 +16,69 @@ require('zappa') ->
     @render 'index'
 
   @on login: ->
+    @client.players ||= []
+    @client.players.push @data.nickname
     @client.nickname = @data.nickname
     @emit login: {nickname: @client.nickname}
+    @emit join: {nickname: @client.nickname}
+    @broadcast join: {nickname: @client.nickname}
+
+  @on logout: ->
+    oldNickname = @client.nickname
+    @client.nickname = null
+    @emit 'logout'
+    @emit leave: {nickname: oldNickname}
+    @broadcast leave: {nickname: oldNickname}
+
+  @on disconnect: ->
+    @broadcast leave: {nickname: @client.nickname}
 
   @on said: ->
-    @broadcast said: {nickname: @client.nickname, text: @data.text}
-    @emit said: {nickname: @client.nickname, text: @data.text}
+    if @client.nickname
+      @broadcast said: {nickname: @client.nickname, text: @data.text}
+      @emit said: {nickname: @client.nickname, text: @data.text}
+    else
+      @emit said: {error: 'Not Logged In'}
 
   @client '/js/index.js': ->
     @connect()
 
     @on said: ->
-      $('#chat').append "<p>#{@data.nickname} said: #{@data.text}</p>"
+      if @data.error
+        alert "Error: #{@data.error}"
+      else
+        $('#chat').append "<p>#{@data.nickname} said: #{@data.text}</p>"
 
     @on login: ->
       $('#user-info').html """
         Welcome #{@data.nickname}!
         <button id='logout' class='btn' type='submit'>Sign Out</button>
       """
+    @on join: ->
+      $('#players .row').append """
+        <div class='span2' id='player-#{@data.nickname}' ><div>#{@data.nickname}</div></div>
+      """
+
+    @on logout: ->
+      $('#user-info').html '''
+        <form id='login' action:''>
+          <input class='input-small' type='text' placeholder='Username'/>
+          <button class='btn' type='submit'>Sign In</button>
+        </form>
+      '''
+
+    @on leave: ->
+      $("#players .row #player-#{@data.nickname}").remove()
 
     $ =>
-      $('#box').focus()
-
-      $('#logout').click (e) =>
-        @emit logout:
+      $('#logout').live 'click', (e) =>
+        @emit 'logout'
+        $('#chat-input button').attr disabled: true
         e.preventDefault()
 
-      $('#login button').click (e) =>
+      $('#login button').live 'click', (e) =>
         @emit login: {nickname: $('#login input').val()}
+        $('#chat-input button').attr disabled: false
         e.preventDefault()
 
       $('#chat-input button').click (e) =>
@@ -89,12 +124,15 @@ require('zappa') ->
       h1 -> 'Pivotal Poker'
     div class: 'row', ->
       div class: 'span10', ->
-        h2 -> 'Primary content'
+        div class: 'story', ->
+          h2 "Story: Reconfigure apache on all boxes with redis logging"
+        div id: 'players', class: 'players', ->
+          div class: 'row', '&nbsp;'
       div class: 'span4', ->
         h3 -> 'Chat'
         div id: 'chat'
         form id: 'chat-input', class: 'pull-right', ->
           input class: 'span3', type: 'text', id: 'box'
-          button class:'btn', 'Send'
+          button class:'btn', disabled: true, 'Send'
 
 # vim:ft=coffee ts=2 sw=2 et :
