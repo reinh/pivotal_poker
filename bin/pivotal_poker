@@ -19,19 +19,19 @@ require('zappa') ->
 
   @on login: ->
     @client.nickname = @data.nickname
-    @emit login: {nickname: @client.nickname}
-    @emit join: {nickname: @client.nickname}
-    @broadcast join: {nickname: @client.nickname}
+    @emit login:      {id: @client.nickname, nickname: @client.nickname}
+    @emit join:       {id: @client.nickname, nickname: @client.nickname}
+    @broadcast join:  {id: @client.nickname, nickname: @client.nickname}
 
   @on logout: ->
     oldNickname = @client.nickname
     @client.nickname = null
     @emit 'logout'
-    @emit leave: {nickname: oldNickname}
-    @broadcast leave: {nickname: oldNickname}
+    @emit leave:      {id: oldNickname}
+    @broadcast leave: {id: oldNickname}
 
   @on disconnect: ->
-    @broadcast leave: {nickname: @client.nickname}
+    @broadcast leave: {id: @client.nickname}
 
   @coffee 
     # Backbone
@@ -56,10 +56,12 @@ require('zappa') ->
           _.bindAll(@, 'render')
 
         render: ->
+          status = @model.get('status') ? 'voting'
           $(@el).html """
             #{@model.get 'nickname'}
-            - #{@model.get 'status'}
+            - #{status}
           """
+          $(@el).addClass status
           @
 
       
@@ -101,10 +103,18 @@ require('zappa') ->
             el: $('#users')
             collection: @users
           
+          @add_user id: 'Rein',   nickname: 'Rein'
+          @add_user id: 'John',   nickname: 'John'
+          @add_user id: 'Bob',    nickname: 'Bob'
+          @add_user id: 'Maciej', nickname: 'Maciej'
+
           @users_view.render()
           
           # Then start backbone
           # Backbone.history.start()
+        
+        add_user:    (data)     -> @users.add data
+        remove_user: (id) -> @users.remove @users.get(id)
     
       window.Application = Application       
 
@@ -117,10 +127,8 @@ require('zappa') ->
         Welcome #{@data.nickname}!
         <button id='logout' class='btn' type='submit'>Sign Out</button>
       """
-      window.app.users.add
-        id: @data.id
-        nickname: @data.nickname
-        status: @data.status
+    
+    @on join: -> window.app.add_user @data
 
     @on logout: ->
       $('#user-info').html '''
@@ -129,6 +137,8 @@ require('zappa') ->
           <button class='btn' type='submit'>Sign In</button>
         </form>
       '''
+    
+    @on leave: -> window.app.remove_user @data.id
 
     $ =>
       window.app = new Application
