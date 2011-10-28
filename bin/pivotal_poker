@@ -12,12 +12,12 @@ require('zappa') ->
   @enable 'serve jquery'
   @use 'logger', static: @basedir + 'public'
 
+  @helper test: -> 'TEST'
+
   @get '/': ->
     @render 'index'
 
   @on login: ->
-    @client.players ||= []
-    @client.players.push @data.nickname
     @client.nickname = @data.nickname
     @emit login: {nickname: @client.nickname}
     @emit join: {nickname: @client.nickname}
@@ -33,31 +33,94 @@ require('zappa') ->
   @on disconnect: ->
     @broadcast leave: {nickname: @client.nickname}
 
-  @on said: ->
-    if @client.nickname
-      @broadcast said: {nickname: @client.nickname, text: @data.text}
-      @emit said: {nickname: @client.nickname, text: @data.text}
-    else
-      @emit said: {error: 'Not Logged In'}
+  @coffee 
+    # Backbone
+
+    '/app/models/user.js': ->
+      class User extends Backbone.Model   
+      window.User = User
+  
+    '/app/collections/users.js': ->
+      class Users extends Backbone.Collection
+        model: User
+        comparator: (user) -> user.get 'nickname'
+      
+      window.Users = Users
+    
+    '/app/views/user_view.js': ->
+      class UserView extends Backbone.View
+        tagName: 'li'
+        className: 'user'
+        
+        initialize: ->
+          _.bindAll(@, 'render')
+
+        render: ->
+          $(@el).html """
+            #{@model.get 'nickname'}
+            - #{@model.get 'status'}
+          """
+          @
+
+      
+      window.UserView = UserView
+
+    '/app/views/users_view.js': ->
+      class UsersView extends Backbone.View
+        initialize: ->
+          _.bindAll(@, 'render')
+          @collection.bind('add',    @render)
+          @collection.bind('remove', @render)
+          @collection.bind('reset',  @render)
+        
+        render: ->
+          $(@el).html '''
+            <h2>Users</h2>
+            <ul class='users'></ul>
+          '''
+
+          @collection.each (user) =>
+            view = new UserView
+              model: user
+              collection: @collection
+            @.$('ul').append view.render().el
+          
+          @
+      
+      window.UsersView = UsersView
+
+    '/app/controllers/application.js': ->
+      class Application
+        start: ->
+          console.log 'App started'
+
+          @users = new Users
+
+          # Create your controllers here...
+          @users_view = new UsersView 
+            el: $('#users')
+            collection: @users
+          
+          @users_view.render()
+          
+          # Then start backbone
+          # Backbone.history.start()
+    
+      window.Application = Application       
 
   @client '/js/index.js': ->
+    
     @connect()
-
-    @on said: ->
-      if @data.error
-        alert "Error: #{@data.error}"
-      else
-        $('#chat').append "<p>#{@data.nickname} said: #{@data.text}</p>"
 
     @on login: ->
       $('#user-info').html """
         Welcome #{@data.nickname}!
         <button id='logout' class='btn' type='submit'>Sign Out</button>
       """
-    @on join: ->
-      $('#players .row').append """
-        <div class='span2' id='player-#{@data.nickname}' ><div>#{@data.nickname}</div></div>
-      """
+      window.app.users.add
+        id: @data.id
+        nickname: @data.nickname
+        status: @data.status
 
     @on logout: ->
       $('#user-info').html '''
@@ -67,10 +130,10 @@ require('zappa') ->
         </form>
       '''
 
-    @on leave: ->
-      $("#players .row #player-#{@data.nickname}").remove()
-
     $ =>
+      window.app = new Application
+      window.app.start()
+
       $('#logout').live 'click', (e) =>
         @emit 'logout'
         $('#chat-input button').attr disabled: true
@@ -94,6 +157,17 @@ require('zappa') ->
         script src: '/socket.io/socket.io.js'
         script src: '/zappa/jquery.js'
         script src: '/zappa/zappa.js'
+        
+        script src: 'js/lib/json2.js'
+        script src: 'http://documentcloud.github.com/underscore/underscore-min.js'
+        script src: 'http://documentcloud.github.com/backbone/backbone-min.js'
+
+        script src: '/app/models/user.js'
+        script src: '/app/collections/users.js'
+        script src: '/app/controllers/application.js'
+        script src: '/app/views/user_view.js'
+        script src: '/app/views/users_view.js'
+
         script src: '/js/index.js'
 
         link rel: 'stylesheet', href: 'http://twitter.github.com/bootstrap/1.3.0/bootstrap.min.css'
@@ -126,13 +200,8 @@ require('zappa') ->
       div class: 'span10', ->
         div class: 'story', ->
           h2 "Story: Reconfigure apache on all boxes with redis logging"
-        div id: 'players', class: 'players', ->
-          div class: 'row', '&nbsp;'
       div class: 'span4', ->
-        h3 -> 'Chat'
-        div id: 'chat'
-        form id: 'chat-input', class: 'pull-right', ->
-          input class: 'span3', type: 'text', id: 'box'
-          button class:'btn', disabled: true, 'Send'
-
+        div id: 'users'
+        
 # vim:ft=coffee ts=2 sw=2 et :
+
